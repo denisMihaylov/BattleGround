@@ -1,3 +1,0 @@
-
-class BattleGroundError(Exception):
-	pass
