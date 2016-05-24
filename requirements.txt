@@ -1,2 +1,4 @@
 python_chess == 0.14.0
+setuptools == 3.3
+SQLAlchemy == 1.0.13
 chess == 0.1
