@@ -19,3 +19,6 @@ class WrongPasswordError(BattleGroundError):
 
 class LogInRequiredError(BattleGroundError):
 	pass
+
+class AnotherUserLogged(BattleGroundError):
+	pass

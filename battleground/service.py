@@ -19,6 +19,10 @@ class Service:
     def __init__(self):
         self._session = entity.Session()
 
+    def update_entity(self, entity):
+        self._session.add(entity)
+        self._session.commit()
+
     def _remove(self, query, arg):
         if query.first():
             query.delete()
@@ -26,20 +30,24 @@ class Service:
         else:
             self._raise_not_found(arg)
 
-class UserAwareService(Service):
-    def __init__(self):
-        super().__init__()
-        self._user_service = ServiceFactory.get_user_service()
+    def _get_query(self):
+        return self._session.query(self._get_entity_cls())
 
-    def _raise_login_error(self):
-        raise err.LogInRequiredError("You need to be logged in "
-                                     "to perform this operation")
+    def _get_filtered_query(self, **keywords):
+        return self._get_query().filter_by(**keywords)
 
-class BattleService(UserAwareService):
+    def get_logged_user(self):
+        user = ServiceFactory.get_user_service().current_user
+        if user == None:
+            raise err.LogInRequiredError("You need to be logged in "
+                                         "to perform this operation")
+        return user
+
+class BattleService(Service):
     pass
 
 
-class GameService(UserAwareService):
+class GameService(Service):
 
     def add_game(self, name, source):
         game = self.get_game(name=name.strip())
@@ -48,22 +56,20 @@ class GameService(UserAwareService):
                 name)
         else:
             game = entity.Game(name=name.strip(), source=source)
-            user = self._user_service.current_user
-            if not user:
-                self._raise_login_error()
+            user = self.get_logged_user()
             user.games.append(game)
-            self._user_service.update_user(user)
+            self.update_entity(user)
 
-    def get_game_query(self, **keywords):
-        return self._session.query(entity.Game).filter_by(**keywords)
+    def _get_entity_cls(self):
+        return entity.Game
 
     def get_game(self, **keywords):
-        return self.get_game_query(**keywords).first()
+        return self._get_filtered_query(**keywords).first()
 
     def remove_game(self, name):
         name = name.strip()
-        game = self.get_game_query(name=name)
-        self._remove(game, name)
+        game_query = self._get_filtered_query(name=name)
+        self._remove(game_query, name)
 
     def update_game(self, name, source):
         game = self.get_game(name=name.strip())
@@ -71,8 +77,7 @@ class GameService(UserAwareService):
             _raise_not_found(name)
         else:
             game.source = source
-            self._session.add(game)
-            self._session.commit()
+            self.update_entity(game)
 
     def _raise_not_found(self, name):
         raise err.GameNotExistsError("Game with name [%s] does not exist" %\
@@ -84,6 +89,7 @@ class UserService(Service):
         self.current_user = None
 
     def add_user(self, username, password):
+        self._check_for_logged_user()
         username = username.strip()
         user = self.get_user(username=username)
         if user:
@@ -92,25 +98,33 @@ class UserService(Service):
         else:
             password = password.strip()
             user = entity.User(username=username, password=password)
-            self._session.add(user)
-            self._session.commit()
+            self.update_entity(user)
             return user
 
     def _raise_not_found(self, username):
         raise err.UserNotExistsError("User [%s] not registered" % username)
 
+    def _check_for_logged_user(self):
+        if self.current_user:
+            raise err.AnotherUserLogged("User [%s] is logged. Logout first" %\
+                self.current_user)
+
+    def _get_entity_cls(self):
+        return entity.User
+
     def remove_user(self, username):
         username = username.strip()
-        user = self.get_user_query(username=username)
-        self._remove(user, username)
-
-    def get_user_query(self, **keywords):
-        return self._session.query(entity.User).filter_by(**keywords)
+        user_query = self._get_filtered_query(username=username)
+        self._remove(user_query, username)
 
     def get_user(self, **keywords):
-        return self.get_user_query(**keywords).first()
+        return self._get_filtered_query(**keywords).first()
+
+    def get_all_users(self):
+        return self._session.query(entity.User).all()
 
     def log_in(self, username, password):
+        self._check_for_logged_user()
         username = username.strip()
         self.current_user = self.get_user(username=username)
         if not self.current_user:
@@ -126,6 +140,10 @@ class UserService(Service):
     def is_logged(self):
         return self.current_user != None
 
-    def update_user(self, user):
-        self._session.add(user)
-        self._session.commit()
+class BotService(Service):
+
+    def add_bot(self, game_id, source):
+        user = ServiceFactory.get_user_service().current_user
+
+
+    def get_bot(self, )

@@ -16,10 +16,7 @@ class Battle(Base):
 
     id = Column(Integer, Sequence('battle_id_seq'), primary_key=True)
 
-    game_id = Column(Integer, ForeignKey('games.id'))
-    game = relationship("Game")
-
-    bots = relationship("Bots", secondary=battle_bots,\
+    bots = relationship("Bot", secondary=battle_bots,\
         back_populates="battles")
 
 class Bot(Base):
@@ -27,6 +24,7 @@ class Bot(Base):
 
     id = Column(Integer, Sequence('bot_id_seq'), primary_key=True)
     rating = Column(Integer)
+    source = Column(UnicodeText())
 
     game_id = Column(Integer, ForeignKey('games.id'))
     game = relationship("Game", back_populates="bots")
