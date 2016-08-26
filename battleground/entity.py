@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine, UnicodeText, Table
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, String, VARCHAR, Sequence, ForeignKey
-from sqlalchemy.orm import sessionmaker, relationship
+from sqlalchemy.orm import scoped_session, sessionmaker, relationship
 
 db_engine = create_engine('sqlite:///test1.db')
 
@@ -74,6 +74,7 @@ class Game(Base):
     name = Column(String)
     author_id = Column(Integer, ForeignKey('users.id'))
     author = relationship("User", back_populates="games")
+    players_count = Column(String)
 
     bots = relationship("Bot", order_by=Bot.rating)
 
@@ -105,4 +106,5 @@ class User(Base):
 Base.metadata.bind = db_engine
 Base.metadata.create_all()
 
-session = sessionmaker(bind=db_engine)()
+session_factory = sessionmaker(bind=db_engine)
+session = scoped_session(session_factory)

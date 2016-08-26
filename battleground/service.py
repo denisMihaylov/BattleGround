@@ -101,7 +101,7 @@ class GameService(Service):
     Class providing base operatirons on Games
     """
 
-    def add_game(self, name, source):
+    def add_game(self, name, source, players_count):
         """
         Creates a new Game
         Every game's source code should be python3 code and would be executed
@@ -121,7 +121,8 @@ class GameService(Service):
             game = entity.Game(
                 name=name.strip(),
                 source=source,
-                author=user)
+                author=user,
+                players_count=players_count)
             self.update_entity(game)
             return game
 
@@ -391,11 +392,11 @@ class BattleService(Service):
         and then updated the bot rating based on the elo system
         """
 
-        # update battle state to RUNNING
-        battle.state = BattleState.RUNNING
-        self.update_entity(battle)
-
         def execute_battle(bots, game, battle):
+            # update battle state to RUNNING
+            battle.state = BattleState.RUNNING
+            self.update_entity(battle)
+
             # configure codejail
             codejail.jail_code.configure(
                 'python',
@@ -453,7 +454,8 @@ class BattleService(Service):
 
         # start the battle in another thread
         args = (bots, game, battle)
-        _thread.start_new_thread(execute_battle, args)
+        # _thread.start_new_thread(execute_battle, args)
+        execute_battle(bots, game, battle)
 
     def __create_fighter_files(self, bots, temp_dir):
         """
@@ -500,6 +502,7 @@ class BattleService(Service):
         Based on the algorithm / code presented here
         http://elo-norsak.rhcloud.com/index.php
         """
+        FAIR_FACTOR = self.__calculate_fair_factor(fighters)
         K = 32 / (len(fighters) - 1)
 
         for i, fighter in enumerate(fighters):
@@ -529,8 +532,41 @@ class BattleService(Service):
                     elo_change += K * (S - EA)
 
             # add accumulated change to initial ELO for final ELO
-            fighter.bot.rating += round(elo_change)
+            fighter.bot.rating += round(elo_change * FAIR_FACTOR)
             entity.session.add(fighter.bot)
+
+    def __calculate_fair_factor(self, fighters):
+        """
+        The FAIR_FACTOR is used to lower the prices and losses in ranked
+        battles and stimulate the playing agains random opponent.
+        The FAIR_FACTOR is bigger if the ratio between all battles
+        played by bots and battles between the specified fighters is lower
+        If the bots play frequently agains one another the FAIR_FACTOR
+        will be lower and the bounty will decrease.
+        """
+        bot_to_battle_ids = self.__get_bots_to_battle_ids_hash(fighters)
+        result = 0
+        for bot_id1, battle_ids1 in bot_to_battle_ids.items():
+            if len(battle_ids1) < 3:
+                result += 1
+                continue
+            fair_factor = 0
+            for bot_id2, battle_ids2 in bot_to_battle_ids.items():
+                if bot_id1 != bot_id2:
+                    if len(battle_ids2) < 3:
+                        fair_factor += 1
+                        continue
+                    def func(battle_id):
+                        return battle_id not in battle_ids2
+                    unique = len(list(filter(func, battle_ids1))) + 1
+                    fair_factor += unique / len(battle_ids1)
+            result += (fair_factor / (len(fighters) - 1))
+        return result / len(fighters);
+
+    def __get_bots_to_battle_ids_hash(self, fighters):
+        def func(bot):
+            return [fighter.battle.id for fighter in bot.fighters]
+        return {fighter.bot.id: func(fighter.bot) for fighter in fighters}
 
 
 class MatchMakingService:
