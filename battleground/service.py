@@ -250,6 +250,20 @@ class UserService(Service):
         return self.current_user is not None
 
 
+class BotReadyState:
+    """
+    Ready states for the bot
+    If a bot is in READY state that means every one can challenge him
+    and he can be used in matchmaking
+    If a bot is in CHALLENGE state that means it can only be challenged
+    If a bot is in NOT_READY state it means that the bot can only
+    be played from the BattleService in a single Battle
+    """
+    READY = "READY"
+    CHALLENGE = "CHALLENGE"
+    NOT_READY = "NOT_READY"
+
+
 class BotService(Service):
     """
     BotService class provides base operations to manage bots
@@ -279,7 +293,8 @@ class BotService(Service):
                 author=user,
                 source=source,
                 name=bot_name,
-                version=1)
+                version=1,
+                ready_state=BotReadyState.NOT_READY)
             self.update_entity(bot)
             return bot
 
@@ -340,7 +355,7 @@ class BattleService(Service):
 
     ENV_PATH = '/home/denis/university/python/sandbox_virtualenv/bin/python'
 
-    def battle_bots(self, *bots):
+    def battle_bots(self, *bots, ranked=False):
         """
         Battles multiple bots which play the same game
         This is only one battle.
@@ -351,7 +366,7 @@ class BattleService(Service):
                 error = "Not all bots play the same game"
                 raise err.IncompatibleBotsError(error)
         battle = self.__create_battle(bots)
-        self.__start_battle(battle, game, bots)
+        self.__start_battle(battle, game, bots, ranked)
 
     def __create_battle(self, bots):
         """
@@ -363,7 +378,7 @@ class BattleService(Service):
         entity.session.commit()
         return battle
 
-    def __start_battle(self, battle, game, bots):
+    def __start_battle(self, battle, game, bots, ranked):
         """
         Starts an async thred that executes the battle
         The battle changes its state from running to concluded and
@@ -414,19 +429,22 @@ class BattleService(Service):
                     entity.session.add(fighter)
 
             # update the bots rating
-            if final_order is None:
-                for i in range(len(battle.fighters) / 2):
-                    stronger = battle.fighters[-i - 1]
-                    weaker = battle.fighters[i]
-                    rating_diff = stronger - weaker
-                    rating_diff = round(rating_diff / 50)
-                    stronger.bot.rating -= rating_diff
-                    weaker.bot.rating += rating_diff
-            else:
-                self.__update_bots_elo(battle.fighters, final_order)
+            if ranked:
+                if final_order is None:
+                    for i in range(len(battle.fighters) / 2):
+                        stronger = battle.fighters[-i - 1]
+                        weaker = battle.fighters[i]
+                        rating_diff = stronger - weaker
+                        rating_diff = round(rating_diff / 50)
+                        stronger.bot.rating -= rating_diff
+                        weaker.bot.rating += rating_diff
+                else:
+                    self.__update_bots_elo(battle.fighters, final_order)
 
             # save all changes
             entity.session.commit()
+
+            return final_order
 
         # start the battle in another thread
         args = (bots, game, battle)
@@ -509,4 +527,6 @@ class BattleService(Service):
             fighter.bot.rating += round(elo_change)
             entity.session.add(fighter.bot)
 
-class MatchMakingService
+
+class MatchMakingService:
+    pass

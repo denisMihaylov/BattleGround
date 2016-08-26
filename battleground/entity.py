@@ -43,6 +43,7 @@ class Bot(Base):
 
     game_id = Column(Integer, ForeignKey('games.id'))
     game = relationship("Game", back_populates="bots")
+    ready_state = Column(String)
 
     author_id = Column(Integer, ForeignKey('users.id'))
     author = relationship("User", back_populates="bots")
