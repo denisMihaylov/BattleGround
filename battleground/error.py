@@ -1,24 +1,47 @@
 
 class BattleGroundError(Exception):
-	pass
+    pass
+
 
 class GameExistsError(BattleGroundError):
-	pass
+    pass
+
 
 class GameNotExistsError(BattleGroundError):
-	pass
+    pass
+
 
 class UserExistsError(BattleGroundError):
-	pass
+    pass
+
 
 class UserNotExistsError(BattleGroundError):
-	pass
+    pass
+
+
+class BotExistsError(BattleGroundError):
+    pass
+
+
+class BotNotExistsError(BattleGroundError):
+    pass
+
 
 class WrongPasswordError(BattleGroundError):
-	pass
+    pass
+
 
 class LogInRequiredError(BattleGroundError):
-	pass
+    pass
 
-class AnotherUserLogged(BattleGroundError):
-	pass
+
+class AnotherUserLoggedError(BattleGroundError):
+    pass
+
+
+class IncompatibleBotsError(BattleGroundError):
+    pass
+
+
+class RestrictedAccessError(BattleGroundError):
+    pass
