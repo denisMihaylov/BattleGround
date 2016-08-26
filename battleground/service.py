@@ -244,7 +244,7 @@ class UserService(Service):
             raise err.WrongPasswordError(error)
 
     def log_out(self):
-        self.current_user is None
+        self.current_user = None
 
     def is_logged(self):
         return self.current_user is not None
@@ -297,6 +297,11 @@ class BotService(Service):
                 ready_state=BotReadyState.NOT_READY)
             self.update_entity(bot)
             return bot
+
+    def update_ready_state(self, bot_name, ready_state):
+        bot = self.get_by_name(bot_name)
+        bot.ready_state = ready_state
+        self.update_entity(bot)
 
     def update_bot(self, bot_name, source):
         """
@@ -529,4 +534,24 @@ class BattleService(Service):
 
 
 class MatchMakingService:
-    pass
+
+    def challenge(self, opponent_name, opponent_bot_name, bot_name):
+        bot_service = ServiceFactory.get_bot_service()
+        battle_service = ServiceFactory.get_battle_service()
+
+        opponent_bot = bot_service.get_bot_for_user(
+            opponent_name,
+            opponent_bot_name)
+        if (opponent_bot.ready_state is not BotReadyState.READY) and\
+           (opponent_bot.ready_state is not BotReadyState.CHALLENGE):
+            error = "Bot [%s] cannot be challenged."
+            raise err.NotReadyBotError(error)
+
+        user_bot = bot_service.by_name(bot_name)
+        battle_service.battle_bots(user_bot, opponent_bot, ranked=True)
+
+        if user_bot.rating - opponent_bot.rating > 150:
+            raise err.InvalidBotError("Pick a stronger opponent")
+
+    def find_opponent(self, max_rating_diff=300):
+        pass

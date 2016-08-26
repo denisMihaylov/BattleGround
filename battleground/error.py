@@ -45,3 +45,11 @@ class IncompatibleBotsError(BattleGroundError):
 
 class RestrictedAccessError(BattleGroundError):
     pass
+
+
+class NotReadyBotError(BattleGroundError):
+    pass
+
+
+class InvalidBotError(BattleGroundError):
+    pass
