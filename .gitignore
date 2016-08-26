@@ -1,2 +1,5 @@
 *test.db
 *__pycache__*
+battle_ground.egg-info
+build
+dist
