@@ -140,7 +140,7 @@ class GameService(Service):
         game = self.get_by_name(name.strip())
         if (game.author != user):
             error = "Game with name [%s] is not owned by you" % name
-            raise err.RestrictedAccessError(error)
+            raise err.RestrictedAccessErrorError(error)
 
     def update_game(self, name, source):
         self.__check_game_rigths(name)
@@ -150,6 +150,7 @@ class GameService(Service):
         else:
             game.source = source
             self.update_entity(game)
+            return game
 
     def _raise_not_found(self, name):
         error = "Game with name [%s] does not exist" % name
@@ -215,6 +216,7 @@ class UserService(Service):
         self.__change_rights(name, UserRights.ADMIN)
 
     def __change_rights(self, name, rights):
+        self.check_admin_rights()
         user = self.get_by_name(name)
         user.rights = rights
         self.update_entity(user)
@@ -229,9 +231,10 @@ class UserService(Service):
         self._remove(user_query, name)
 
     def check_admin_rights(self):
+        self.get_logged_user()
         if self.current_user.rights != UserRights.ADMIN:
             error = "Admin rights needed to perform this operation"
-            raise err.RestrictedAccess(error)
+            raise err.RestrictedAccessError(error)
 
     def log_in(self, name, password):
         self._check_for_logged_user()
@@ -303,6 +306,7 @@ class BotService(Service):
         bot = self.get_by_name(bot_name)
         bot.ready_state = ready_state
         self.update_entity(bot)
+        return bot
 
     def update_bot(self, bot_name, source):
         """
@@ -404,7 +408,7 @@ class BattleService(Service):
                 lang=python3)
 
             # sort bots by rating so the weakest start first
-            bots = sorted(bots, key=lambda bot: bot.rating, reverse=True)
+            bots = sorted(bots, key=lambda bot: bot.rating)
 
             # work with a temporary directory where
             # the sources are stored as modules
