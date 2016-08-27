@@ -570,8 +570,14 @@ class BattleService(Service):
 
 
 class MatchMakingService:
+    """
+    Basic operations to enable clallenging and finding battles
+    """
 
     def challenge(self, opponent_name, opponent_bot_name, bot_name):
+        """
+        Challenge a single opponent into a battle
+        """
         bot_service = ServiceFactory.get_bot_service()
         battle_service = ServiceFactory.get_battle_service()
 
@@ -589,5 +595,8 @@ class MatchMakingService:
         if user_bot.rating - opponent_bot.rating > 150:
             raise err.InvalidBotError("Pick a stronger opponent")
 
-    def find_opponent(self, max_rating_diff=300):
+    def find_opponent(self, bot_name, max_rating_diff=300):
+        """
+
+        """
         pass
